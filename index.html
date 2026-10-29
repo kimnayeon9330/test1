@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>냉털왕 - 맞춤 요리 & Gamified Fridge Manager</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cream: '#FAF7F2',
+                        sand: '#F3EDE2',
+                        warmWood: '#8C6D58',
+                        warmWoodDark: '#5C4435',
+                        accentGold: '#E5A93C',
+                        softOrange: '#E87A5D',
+                        softGreen: '#6B9080',
+                        badgeBronze: '#CD7F32',
+                        badgeSilver: '#C0C0C0',
+                        badgeGold: '#FFD700'
+                    },
+                    fontFamily: {
+                        sans: ['Pretendard', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        body {
+            background-color: #FAF7F2;
+            color: #4A3E3D;
+            user-select: none;
+        }
+        .card-shadow {
+            box-shadow: 0 10px 25px -5px rgba(140, 109, 88, 0.08), 0 8px 10px -6px rgba(140, 109, 88, 0.05);
+        }
+        .wood-gradient {
+            background: linear-gradient(135deg, #8C6D58 0%, #6A503F 100%);
+        }
+        .gold-gradient {
+            background: linear-gradient(135deg, #F3C64B 0%, #E5A93C 100%);
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F3EDE2;
+            border-radius: 8px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #D4C3B3;
+            border-radius: 8px;
+        }
+        .roulette-spin {
+            transition: transform 3.5s cubic-bezier(0.15, 0.85, 0.35, 1.05);
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-16">
+
+    <!-- Header -->
+    <header class="sticky top-0 z-30 bg-[#FAF7F2]/90 backdrop-blur-md border-b border-[#E8DFC8]">
+        <div class="max-w-md mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <div class="w-10 h-10 rounded-2xl wood-gradient flex items-center justify-center text-white shadow-md text-lg">
+                    👑
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg text-warmWoodDark leading-none">냉털왕</h1>
+                    <p class="text-xs text-warmWood/70 mt-0.5">식재료 구원 게임</p>
+                </div>
+            </div>
+            
+            <div class="flex bg-sand p-1 rounded-2xl border border-[#E3D7C5] text-xs font-bold">
+                <button id="nav-main-btn" onclick="switchTab('main')" class="px-3 py-1.5 rounded-xl bg-white text-warmWoodDark shadow-sm transition">
+                    🍳 요리
+                </button>
+                <button id="nav-room-btn" onclick="switchTab('room')" class="px-3 py-1.5 rounded-xl text-warmWood/70 hover:text-warmWoodDark transition flex items-center gap-1">
+                    🧊 나의 냉장고
+                </button>
+            </div>
+
+            <div class="flex items-center gap-2 bg-sand px-3 py-1.5 rounded-full border border-[#E3D7C5]">
+                <i class="fa-solid fa-coins text-accentGold text-sm"></i>
+                <span id="user-coins" class="font-bold text-sm text-warmWoodDark">0</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN VIEW -->
+    <main id="view-main" class="max-w-md mx-auto px-4 pt-4 space-y-5">
+        <!-- Profile Banner -->
+        <section class="bg-white rounded-3xl p-5 card-shadow border border-[#EFE8DA]">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="relative">
+                        <div class="w-12 h-12 rounded-2xl gold-gradient flex items-center justify-center text-2xl shadow-inner">
+                            👨‍🍳
+                        </div>
+                        <span class="absolute -bottom-1 -right-1 bg-warmWoodDark text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold" id="level-badge">
+                            Lv.1
+                        </span>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="font-bold text-lg text-warmWoodDark" id="user-title">초보 냉털러</span>
+                            <button onclick="openBadgesModal()" class="text-xs bg-amber-50 text-accentGold border border-amber-200 px-2 py-0.5 rounded-md hover:bg-amber-100 transition">
+                                <i class="fa-solid fa-award"></i> 칭호
+                            </button>
+                        </div>
+                        <p class="text-xs text-stone-500 mt-0.5">오늘도 지구와 통장을 지켰어요!</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <div class="flex justify-between text-xs mb-1">
+                    <span class="text-stone-500 font-medium">경험치 (EXP)</span>
+                    <span class="font-bold text-warmWood" id="exp-text">0 / 100</span>
+                </div>
+                <div class="w-full bg-sand rounded-full h-3 overflow-hidden p-0.5 border border-[#E3D7C5]">
+                    <div id="exp-bar" class="bg-gradient-to-r from-amber-400 to-amber-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-stone-100">
+                <div class="bg-cream p-2.5 rounded-2xl flex items-center gap-3 border border-[#EFE8DA]">
+                    <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm">
+                        <i class="fa-solid fa-recycle"></i>
+                    </div>
+                    <div>
+                        <p class="text-[11px] text-stone-500">구원한 식재료</p>
+                        <p class="font-bold text-sm text-stone-800"><span id="rescued-count">0</span>개</p>
+                    </div>
+                </div>
+                <div class="bg-cream p-2.5 rounded-2xl flex items-center gap-3 border border-[#EFE8DA]">
+                    <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-sm">
+                        <i class="fa-solid fa-piggy-bank"></i>
+                    </div>
+                    <div>
+                        <p class="text-[11px] text-stone-500">절약한 식비</p>
+                        <p class="font-bold text-sm text-stone-800"><span id="saved-money">0</span>원</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Actions -->
+        <section class="grid grid-cols-2 gap-3">
+            <button onclick="openRouletteModal()" class="wood-gradient text-white p-4 rounded-3xl text-left shadow-lg hover:brightness-105 active:scale-95 transition relative overflow-hidden group">
+                <div class="absolute -right-2 -bottom-2 text-4xl opacity-20 group-hover:scale-110 transition">🎰</div>
+                <div class="text-xs text-amber-200 font-medium mb-1"><i class="fa-solid fa-sparkles"></i> 무작위 추천</div>
+                <h3 class="font-bold text-base leading-tight">오늘의 럭키<br>냉털 룰렛</h3>
+                <span class="inline-block mt-3 text-[11px] bg-white/20 px-2.5 py-1 rounded-full backdrop-blur-sm">돌리고 추천받기 →</span>
+            </button>
+
+            <button onclick="openQuestsModal()" class="bg-white border border-[#EFE8DA] p-4 rounded-3xl text-left card-shadow hover:border-amber-200 active:scale-95 transition relative overflow-hidden group">
+                <div class="flex justify-between items-start mb-1">
+                    <span class="text-xs text-stone-500 font-medium"><i class="fa-solid fa-scroll text-accentGold"></i> 일일 퀘스트</span>
+                    <span class="w-2 h-2 rounded-full bg-softOrange animate-pulse" id="quest-dot"></span>
+                </div>
+                <h3 class="font-bold text-base text-warmWoodDark leading-tight">미션 수행하고<br>EXP 받기</h3>
+                <span class="inline-block mt-3 text-[11px] bg-sand text-warmWoodDark px-2.5 py-1 rounded-full font-medium">퀘스트 확인 →</span>
+            </button>
+        </section>
+
+        <!-- Fridge Management -->
+        <section class="bg-white rounded-3xl p-5 card-shadow border border-[#EFE8DA]">
+            <div class="flex justify-between items-center mb-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">🧊</span>
+                    <h2 class="font-bold text-warmWoodDark text-base">우리 집 냉장고</h2>
+                </div>
+                <span class="text-xs text-stone-400" id="ingredient-count">총 0개 선택됨</span>
+            </div>
+
+            <div class="flex gap-2 mb-4">
+                <input type="text" id="custom-ingredient-input" placeholder="직접 재료 입력 (예: 두부, 대파)" 
+                       class="flex-1 bg-cream border border-[#E3D7C5] rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:border-warmWood">
+                <button onclick="addCustomIngredient()" class="bg-warmWood text-white text-sm px-4 rounded-xl font-medium hover:bg-warmWoodDark transition">
+                    추가
+                </button>
+            </div>
+
+            <p class="text-xs text-stone-500 mb-2 font-medium">보유한 재료를 터치하세요 (D-Day 포함)</p>
+            <div class="flex flex-wrap gap-2 max-h-48 overflow-y-auto pr-1" id="preset-container"></div>
+        </section>
+
+        <!-- AI Generate Button -->
+        <section>
+            <button onclick="generateRecipes()" id="generate-btn" class="w-full gold-gradient text-warmWoodDark font-bold py-4 rounded-2xl shadow-md text-base flex items-center justify-center gap-2 hover:brightness-105 active:scale-[0.98] transition">
+                <i class="fa-solid fa-wand-magic-sparkles text-amber-800"></i>
+                <span>선택한 재료로 요리 연구하기 (+30 EXP)</span>
+            </button>
+        </section>
+
+        <!-- Recipe Results -->
+        <section id="recipe-section" class="space-y-4">
+            <div class="flex justify-between items-center">
+                <h2 class="font-bold text-warmWoodDark text-base flex items-center gap-2">
+                    <i class="fa-solid fa-utensils text-accentGold"></i>
+                    <span>추천 과학 레시피 (8종)</span>
+                </h2>
+                <span class="text-xs text-stone-400" id="recipe-status">전체 맞춤 레시피 목록</span>
+            </div>
+
+            <div id="recipe-cards-container" class="space-y-4"></div>
+        </section>
+    </main>
+
+    <!-- ROOM VIEW -->
+    <main id="view-room" class="max-w-md mx-auto px-4 pt-4 space-y-5 hidden">
+        <section class="bg-white rounded-3xl p-5 card-shadow border border-[#EFE8DA] text-center space-y-4">
+            <div class="flex justify-between items-center">
+                <h2 class="font-bold text-warmWoodDark text-base flex items-center gap-2">
+                    <span>🧊</span>
+                    <span>나의 냉장고 꾸미기</span>
+                </h2>
+                <button onclick="openShopModal()" class="gold-gradient text-warmWoodDark text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm hover:brightness-105">
+                    🛍️ 데코 상점
+                </button>
+            </div>
+
+            <div id="fridge-room-canvas" class="relative w-full h-80 rounded-2xl border-4 border-amber-200 bg-amber-50/50 flex flex-col items-center justify-center overflow-hidden transition-all duration-300 shadow-inner">
+                <div id="fridge-body" class="w-56 h-72 rounded-3xl bg-slate-200 border-4 border-slate-300 shadow-2xl relative flex flex-col justify-between p-3 transition-all duration-300">
+                    <div class="w-full flex justify-between items-center px-2">
+                        <span class="text-[9px] font-bold tracking-widest text-slate-400">NEANG-KING</span>
+                        <div class="w-8 h-1 bg-slate-400 rounded-full"></div>
+                    </div>
+                    <div class="w-full h-1 bg-slate-300 shadow-sm my-auto"></div>
+                    <div id="sticker-layer" class="absolute inset-0 pointer-events-none"></div>
+                    <div class="w-full flex justify-end px-2">
+                        <div class="w-1.5 h-10 bg-slate-400 rounded-full shadow"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-3 pt-2 text-left">
+                <h3 class="font-bold text-xs text-warmWoodDark">🎨 보유한 냉장고 테마</h3>
+                <div class="flex gap-2 overflow-x-auto pb-1" id="owned-themes-list"></div>
+
+                <h3 class="font-bold text-xs text-warmWoodDark mt-3">✨ 부착할 스티커 (클릭하여 탈부착)</h3>
+                <div class="flex flex-wrap gap-2" id="owned-stickers-list"></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- MODAL 1: RECIPE DETAIL -->
+    <div id="recipe-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+        <div class="bg-white w-full max-w-md max-h-[85vh] rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden animate-slide-up">
+            <div class="p-4 border-b border-stone-100 flex justify-between items-center bg-cream">
+                <span class="text-xs font-bold text-softOrange px-2.5 py-0.5 rounded-full bg-orange-100" id="modal-tag">과학 대표 레시피</span>
+                <button onclick="closeModal('recipe-modal')" class="text-stone-400 hover:text-stone-600 text-lg p-1">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <div class="p-5 overflow-y-auto space-y-4" id="modal-content"></div>
+
+            <div class="p-4 border-t border-stone-100 bg-cream flex gap-2">
+                <button onclick="completeRecipeAndRescue()" class="w-full gold-gradient text-warmWoodDark font-bold py-3 rounded-xl text-xs hover:brightness-105 shadow-md">
+                    🍳 요리 완료 & 식재료 구원 (+50 EXP / +200 골드)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: ROULETTE -->
+    <div id="roulette-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-6 text-center space-y-4 animate-slide-up card-shadow border border-[#EFE8DA]">
+            <div class="flex justify-between items-center border-b border-stone-100 pb-3">
+                <h3 class="font-bold text-warmWoodDark text-base flex items-center gap-1.5">
+                    <span>🎰</span> 오늘의 럭키 냉털 룰렛
+                </h3>
+                <button onclick="closeModal('roulette-modal')" class="text-stone-400 hover:text-stone-600">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="py-4 flex flex-col items-center justify-center relative">
+                <div class="w-40 h-40 rounded-full border-4 border-accentGold bg-sand shadow-inner flex items-center justify-center relative overflow-hidden roulette-spin" id="roulette-wheel">
+                    <div class="text-4xl" id="roulette-result-icon">❓</div>
+                </div>
+            </div>
+
+            <p class="text-xs text-stone-600 font-medium" id="roulette-result-text">버튼을 눌러 운명의 식재료를 뽑아보세요!</p>
+
+            <button onclick="spinRoulette()" id="spin-btn" class="w-full gold-gradient text-warmWoodDark font-bold py-3 rounded-2xl shadow hover:brightness-105 active:scale-95 transition text-sm">
+                🎲 룰렛 돌리기
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL 3: QUESTS -->
+    <div id="quests-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-5 space-y-4 animate-slide-up border border-[#EFE8DA]">
+            <div class="flex justify-between items-center border-b border-stone-100 pb-3">
+                <h3 class="font-bold text-warmWoodDark text-base flex items-center gap-1.5">
+                    <i class="fa-solid fa-scroll text-accentGold"></i> 일일 퀘스트
+                </h3>
+                <button onclick="closeModal('quests-modal')" class="text-stone-400 hover:text-stone-600">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="space-y-2.5" id="quest-list"></div>
+        </div>
+    </div>
+
+    <!-- MODAL 4: BADGES -->
+    <div id="badges-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-5 space-y-4 animate-slide-up border border-[#EFE8DA]">
+            <div class="flex justify-between items-center border-b border-stone-100 pb-3">
+                <h3 class="font-bold text-warmWoodDark text-base flex items-center gap-1.5">
+                    <i class="fa-solid fa-award text-accentGold"></i> 업적 및 칭호
+                </h3>
+                <button onclick="closeModal('badges-modal')" class="text-stone-400 hover:text-stone-600">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="grid grid-cols-2 gap-2.5" id="badge-grid"></div>
+        </div>
+    </div>
+
+    <!-- MODAL 5: SHOP -->
+    <div id="shop-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-5 space-y-4 animate-slide-up border border-[#EFE8DA]">
+            <div class="flex justify-between items-center border-b border-stone-100 pb-3">
+                <h3 class="font-bold text-warmWoodDark text-base flex items-center gap-1.5">
+                    <span>🛍️</span> 데코 아이템 상점
+                </h3>
+                <button onclick="closeModal('shop-modal')" class="text-stone-400 hover:text-stone-600">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="space-y-2.5 max-h-72 overflow-y-auto pr-1" id="shop-items-container"></div>
+        </div>
+    </div>
+
+    <!-- APP SCRIPT -->
+    <script>
+        // Default 8 Detailed Scientific Recipes
+        const BASE_SCIENTIFIC_RECIPES = [
+            {
+                title: "마이아르 파기름 스팸 계란볶음밥",
+                category: "한식/중식",
+                difficulty: "쉬움",
+                time: "12분",
+                calories: "450 kcal",
+                carbs: "58g",
+                protein: "16g",
+                fat: "18g",
+                imageUrl: "https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=600&auto=format&fit=crop&q=80",
+                scienceTip: "파를 약불에서 볶으면 세포벽이 파괴되며 알리신(Allicin) 분해물이 지용성 향미 물질로 전환됩니다. 여기에 깍둑썰기한 스팸을 노릇하게 구워 단백질과 당이 140°C 이상에서 반응하는 마이아르(Maillard) 갈변 반응을 결합하면 감칠맛 향과 풍미가 극대화됩니다.",
+                missingIngredients: ["굴소스", "식용유"],
+                steps: [
+                    "달군 팬에 식용유를 두르고 송송 썬 대파를 약불에서 은근하게 볶아 파기름을 만듭니다.",
+                    "작게 썬 스팸을 넣고 표면이 노릇해질 때까지 볶아 마이아르 갈변 반응을 일으킵니다.",
+                    "한쪽으로 재료를 밀고 계란을 풀어 몽글몽글하게 스크램블을 만듭니다.",
+                    "고슬고슬한 밥과 간장 1작은술을 팬 가장자리에 둘러 태우듯 눌린 후 전체를 빠르게 볶아 완성합니다."
+                ]
+            },
+            {
+                title: "감칠맛 시너지 김치 두부 짜글이",
+                category: "한식",
+                difficulty: "보통",
+                time: "20분",
+                calories: "320 kcal",
+                carbs: "22g",
+                protein: "20g",
+                fat: "14g",
+                imageUrl: "https://images.unsplash.com/photo-1547592180-85f173990554?w=600&auto=format&fit=crop&q=80",
+                scienceTip: "잘 익은 김치의 유기산(젖산)과 두부의 식물성 단백질 글루탐산(Glutamic acid), 그리고 육수의 이노신산(Inosinic acid)이 서로 만나는 작용입니다. 이 맛 물질들이 혀의 각기 다른 수용체를 동시 자극하면 감칠맛을 단독 재료 대비 최고 8배 이상 강하게 느껴지게 합니다.",
+                missingIngredients: ["고춧가루", "국물용 멸치/다시마"],
+                steps: [
+                    "냄비 바닥에 잘게 썬 신김치와 양파, 깍둑썰기한 두부를 깔아줍니다.",
+                    "고춧가루, 간장, 다진 마늘로 만든 양념장을 위에 얹습니다.",
+                    "멸치 다시마 육수를 재료가 자작하게 잠길 정도로만 붓고 중불에서 끓입니다.",
+                    "국물이 푹 조려지며 감칠맛 물질이 서로 융합할 때까지 15분간 바글바글 자작하게 끓여냅니다."
+                ]
+            },
+            {
+                title: "초간단 노버터 에그 치즈 오믈렛",
+                category: "양식",
+                difficulty: "쉬움",
+                time: "8분",
+                calories: "280 kcal",
+                carbs: "4g",
+                protein: "18g",
+                fat: "21g",
+                imageUrl: "https://images.unsplash.com/photo-1525351484163-7529414344d8?w=600&auto=format&fit=crop&q=80",
+                scienceTip: "계란 단백질은 약 60~65°C에서 응고하기 시작합니다. 우유나 체다 치즈의 유지방 및 지질 성분은 계란 단백질 분자 사이사이에 들어가 응고(단백질 변성) 속도를 지연시켜 부드러운 커드(Curd) 구조와 촉촉한 수분감을 유지해 줍니다.",
+                missingIngredients: ["우유", "슬라이스 치즈"],
+                steps: [
+                    "볼에 계란 2개, 우유 2큰술, 소금 한 꼬집을 넣고 거품기로 부드럽게 풉니다.",
+                    "약불로 달군 팬에 코팅유를 살짝 두르고 계란물을 부은 뒤 주걱으로 가운데를 가볍게 저어 커드를 만듭니다.",
+                    "계란이 70%쯤 익어 몽글해졌을 때 한쪽에 치즈를 찢어 올립니다.",
+                    "팬을 기울여 반으로 접어 감싸 안은 뒤 잔열로 치즈를 녹여 완성합니다."
+                ]
+            },
+            {
+                title: "고소함 배가 버섯 간장 계란덮밥",
+                category: "일식/한식",
+                difficulty: "쉬움",
+                time: "10분",
+                calories: "390 kcal",
+                carbs: "62g",
+                protein: "14g",
+                fat: "11g",
+                imageUrl: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=600&auto=format&fit=crop&q=80",
+                scienceTip: "버섯에 풍부한 구아닐산(Guanylic acid)과 발효 간장의 이노신산 및 아미노산 성분이 시너지를 일으킵니다. 열을 가해 버섯의 수분을 살짝 날리면 혀의 감칠맛 수용체 결합력이 높아져 깊은 풍미를 완성합니다.",
+                missingIngredients: ["진간장", "참기름"],
+                steps: [
+                    "버섯(느타리 또는 팽이/표고)을 먹기 좋은 크기로 결대로 찢어 준비합니다.",
+                    "마른 팬에 버섯을 먼저 볶아 수분을 날려 풍미를 축적한 뒤, 간장과 참기름을 둘러 졸입니다.",
+                    "따뜻한 밥 위에 볶은 버섯과 갓 만든 계란 프라이(노른자는 반숙)를 올립니다.",
+                    "반숙 노른자를 터뜨려 간장 양념 및 버섯 풍미와 함께 슥슥 비벼 먹습니다."
+                ]
+            },
+            {
+                title: "바삭 촉촉 양파 감자채전",
+                category: "한식",
+                difficulty: "보통",
+                time: "15분",
+                calories: "290 kcal",
+                carbs: "45g",
+                protein: "5g",
+                fat: "10g",
+                imageUrl: "https://images.unsplash.com/photo-1518013431117-eb1465fa5752?w=600&auto=format&fit=crop&q=80",
+                scienceTip: "감자의 아밀로스 전분 입자는 기름 열을 받으면 빠르게 호화(Gelatinization)를 일으켜 내부 수분을 감싸 촉촉해집니다. 반면 얇게 썬 양파는 고온에서 당이 갈색으로 변하는 카라멜화(Caramelization) 반응이 일어나 바삭한 겉면과 특유의 자연스러운 단맛을 만듭니다.",
+                missingIngredients: ["부침가루/전분가루", "소금"],
+                steps: [
+                    "감자와 양파를 가능한 한 가늘게 채 썹니다.",
+                    "채 썬 감자는 물에 가볍게 헹궈 겉면의 잉여 전분을 제거한 후 물기를 짭니다.",
+                    "감자와 양파에 소금 살짝, 부침가루 1큰술을 넣어 가볍게 버무립니다.",
+                    "기름을 넉넉히 두른 팬에 얇게 펼쳐 얹어 겉면이 골든 브라운 빛이 될 때까지 센불~중불에서 바삭하게 구워냅니다."
+                ]
+            },
+            {
+                title: "풍미가득 마늘버터 닭가슴살 구이",
+                category: "양식/다이어트",
+                difficulty: "보통",
+                time: "15분",
+                calories: "340 kcal",
+                carbs: "6g",
+                protein: "42g",
+                fat: "16g",
+                imageUrl: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=600&auto=format&fit=crop&q=80",
+                scienceTip: "마늘의 대표적 유기황 화합물인 알리신과 향미 성분은 지용성입니다. 버터의 유지방 성분이 마늘의 풍미 물질을 효과적으로 녹여내 흡수하며, 닭가슴살 단백질 표면에 코팅 막을 형성해 수분 증발을 막고 살코기를 육즙 가득 부드럽게 보호합니다.",
+                missingIngredients: ["버터", "통마늘 또는 다진마늘"],
+                steps: [
+                    "닭가슴살에 십자로 얕게 칼집을 내고 소금, 후추로 간을 합니다.",
+                    "달군 팬에 버터와 편 썬 마늘을 넣고 낮은 온도에서 은근하게 익혀 마늘 향이 버터에 배어나오게 합니다.",
+                    "닭가슴살을 얹어 겉면을 노릇하게 구운 뒤, 숟가락으로 팬의 마늘버터 기름을 닭가슴살 위에 지속적으로 끼얹으며(Basting) 속까지 익힙니다.",
+                    "불을 끄고 2분간 레스팅(Resting)하여 육즙이 골고루 퍼지게 한 후 썰어냅니다."
+                ]
+            },
+            {
+                title: "된장 버섯 두부 나베",
+                category: "일식/한식",
+                difficulty: "쉬움",
+                time: "18분",
+                calories: "260 kcal",
+                carbs: "18g",
+                protein: "19g",
+                fat: "11g",
+                imageUrl: "https://images.unsplash.com/photo-1547592180-85f173990554?w=600&auto=format&fit=crop&q=80",
+                scienceTip: "콩을 발효시키는 과정에서 아미노산 단위로 분해된 펩타이드(Peptide)가 된장의 시원한 감칠맛을 만듭니다. 여기에 대파와 버섯에서 나오는 프락탄(Fructan)과 올리고당 성분이 과하지 않은 자연스러운 단맛을 보태어 깊은 국물 맛의 균형을 완성합니다.",
+                missingIngredients: ["재래식 된장", "대파"],
+                steps: [
+                    "전골 냄비에 큼직하게 썬 두부, 각종 버섯, 대파를 보기 좋게 담습니다.",
+                    "따뜻한 물 또는 육수에 된장 1.5큰술을 체에 바쳐 부드럽게 풀어줍니다.",
+                    "냄비에 된장 국물을 붓고 중불에서 은근하게 끓여냅니다.",
+                    "버섯의 즙과 된장의 발효 펩타이드 국물이 융합하면 불을 줄이고 따뜻하게 즐깁니다."
+                ]
+            },
+            {
+                title: "매콤달콤 굴소스 애호박 당근 볶음",
+                category: "한식/중식",
+                difficulty: "쉬움",
+                time: "10분",
+                calories: "190 kcal",
+                carbs: "16g",
+                protein: "4g",
+                fat: "12g",
+                imageUrl: "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=600&auto=format&fit=crop&q=80",
+                scienceTip: "당근과 애호박에 함유된 카로티노이드(Carotenoid/베타카로틴) 성분은 대표적인 지용성 비타민입니다. 기름에 재료를 볶으면 지질 용매에 유효 성분이 녹아 나와 인체 체내 흡수율이 수용성 상태보다 3~5배 이상 획기적으로 향상됩니다.",
+                missingIngredients: ["굴소스", "식용유"],
+                steps: [
+                    "애호박과 당근을 반달 모양이나 채로 얇고 균일하게 썹니다.",
+                    "팬에 식용유를 두르고 당근을 먼저 넣어 기름에 주황빛 카로틴 성분이 녹아 나오도록 볶습니다.",
+                    "애호박을 추가하고 굴소스 1큰술을 넣어 센 불에서 아삭함이 살아있도록 빠르게 볶아냅니다.",
+                    "불을 끄고 통깨나 참기름 한 방울을 떨어뜨려 마무리합니다."
+                ]
+            }
+        ];
+
+        const APP_STATE = {
+            user: {
+                level: 1,
+                exp: 30,
+                maxExp: 100,
+                title: '초보 냉털러',
+                coins: 500,
+                rescuedCount: 4,
+                savedMoney: 13000
+            },
+            ingredients: [
+                { id: 1, name: '달걀', category: '단백질', dDay: 2, icon: '🥚', selected: true },
+                { id: 2, name: '대파', category: '채소', dDay: 1, icon: '🥬', selected: true },
+                { id: 3, name: '양파', category: '채소', dDay: 5, icon: '🧅', selected: false },
+                { id: 4, name: '두부', category: '단백질', dDay: 2, icon: '🧊', selected: true },
+                { id: 5, name: '김치', category: '양념/가공', dDay: 14, icon: '🥬', selected: false },
+                { id: 6, name: '버섯', category: '채소', dDay: 3, icon: '🍄', selected: false },
+                { id: 7, name: '감자', category: '채소', dDay: 7, icon: '🥔', selected: false },
+                { id: 8, name: '닭가슴살', category: '단백질', dDay: 4, icon: '🍗', selected: false }
+            ],
+            themes: [
+                { id: 'classic', name: '클래식 실버', styleClass: 'bg-slate-200 border-slate-300 text-stone-800', price: 0, owned: true },
+                { id: 'wood', name: '감성 내추럴 우드', styleClass: 'wood-gradient border-amber-900 text-amber-100', price: 300, owned: false },
+                { id: 'mint', name: '파스텔 민트', styleClass: 'bg-emerald-100 border-emerald-300 text-emerald-900', price: 300, owned: false },
+                { id: 'pink', name: '레트로 코랄 핑크', styleClass: 'bg-rose-200 border-rose-300 text-rose-900', price: 300, owned: false },
+                { id: 'cyber', name: '사이버펑크 네온', styleClass: 'bg-slate-900 border-cyan-400 text-cyan-300', price: 400, owned: false },
+                { id: 'sunset', name: '선셋 오렌지', styleClass: 'bg-orange-300 border-orange-400 text-orange-950', price: 450, owned: false },
+                { id: 'lavender', name: '라벤더 드림', styleClass: 'bg-purple-200 border-purple-300 text-purple-900', price: 500, owned: false },
+                { id: 'milk', name: '밀키 크림 우유', styleClass: 'bg-amber-50 border-stone-200 text-stone-700', price: 500, owned: false },
+                { id: 'gold', name: '앤틱 골드 클래식', styleClass: 'bg-amber-800 border-amber-600 text-amber-100', price: 600, owned: false },
+                { id: 'ocean', name: '딥 오션 블루', styleClass: 'bg-indigo-900 border-indigo-500 text-indigo-100', price: 650, owned: false },
+                { id: 'macaron', name: '스위트 마카롱', styleClass: 'bg-yellow-100 border-pink-300 text-pink-800', price: 700, owned: false },
+                { id: 'witch', name: '마법사의 창고', styleClass: 'bg-fuchsia-950 border-fuchsia-600 text-fuchsia-200', price: 800, owned: false },
+                { id: 'spaceship', name: 'SF 메탈 우주선', styleClass: 'bg-zinc-300 border-zinc-400 text-zinc-800', price: 1000, owned: false }
+            ],
+            stickers: [
+                { id: 's1', name: '파기름 마스터', icon: '👑', x: 20, y: 15, price: 100, owned: true },
+                { id: 's2', name: '불꽃 요리사', icon: '🔥', x: 60, y: 35, price: 150, owned: false },
+                { id: 's3', name: '지구 수호자', icon: '🌍', x: 30, y: 70, price: 200, owned: false },
+                { id: 's4', name: '유통기한 수호자', icon: '🛡️', x: 70, y: 15, price: 80, owned: false },
+                { id: 's5', name: '칼로리 다이어터', icon: '🥗', x: 15, y: 40, price: 100, owned: false },
+                { id: 's6', name: '황금 프라이팬', icon: '🍳', x: 45, y: 50, price: 120, owned: false },
+                { id: 's7', name: '미슐랭 3스타', icon: '⭐', x: 50, y: 10, price: 150, owned: false },
+                { id: 's8', name: '알뜰살뜰 저금통', icon: '🐷', x: 75, y: 65, price: 180, owned: false },
+                { id: 's9', name: '마이아르 마술사', icon: '🪄', x: 25, y: 80, price: 200, owned: false },
+                { id: 's10', name: '냉장고 요정', icon: '🧚', x: 80, y: 40, price: 250, owned: false },
+                { id: 's11', name: '초스피드 요리', icon: '⚡', x: 10, y: 60, price: 280, owned: false },
+                { id: 's12', name: '맛의 대폭발', icon: '💣', x: 40, y: 25, price: 300, owned: false },
+                { id: 's13', name: '전설의 셰프모', icon: '🎩', x: 35, y: 5, price: 350, owned: false }
+            ],
+            room: {
+                currentTheme: 'classic',
+                placedStickers: ['s1']
+            },
+            quests: [
+                { id: 'q1', text: '소비임박(D-Day) 식재료 1개 선택하기', exp: 20, coins: 50, completed: false },
+                { id: 'q2', text: '식품과학 팁 1회 읽기', exp: 30, coins: 100, completed: false },
+                { id: 'q3', text: '요리 연구(AI 생성) 실행하기', exp: 50, coins: 150, completed: false }
+            ],
+            badges: [
+                { id: 'b1', name: '파기름 왕', desc: '마이아르 요리 3회 완성', icon: '👑', unlocked: true },
+                { id: 'b2', name: '지구 파수꾼', desc: '식재료 10개 구원 완료', icon: '🌱', unlocked: false },
+                { id: 'b3', name: '알뜰 살뜰가', desc: '식비 50,000원 절약', icon: '💰', unlocked: false }
+            ],
+            currentRecipes: BASE_SCIENTIFIC_RECIPES
+        };
+
+        const LEVEL_TITLES = {
+            1: '초보 냉털러',
+            2: '식재료 구조대원',
+            3: '냉장고 마스터',
+            4: '식품과학 셰프',
+            5: '냉털 연금술사'
+        };
+
+        window.onload = function() {
+            renderProfile();
+            renderPresets();
+            renderQuests();
+            renderBadges();
+            renderRoomDecoration();
+            renderRecipeCards(APP_STATE.currentRecipes);
+        };
+
+        function switchTab(tab) {
+            const mainView = document.getElementById('view-main');
+            const roomView = document.getElementById('view-room');
+            const mainBtn = document.getElementById('nav-main-btn');
+            const roomBtn = document.getElementById('nav-room-btn');
+
+            if (tab === 'main') {
+                mainView.classList.remove('hidden');
+                roomView.classList.add('hidden');
+                mainBtn.className = "px-3 py-1.5 rounded-xl bg-white text-warmWoodDark shadow-sm transition font-bold";
+                roomBtn.className = "px-3 py-1.5 rounded-xl text-warmWood/70 hover:text-warmWoodDark transition flex items-center gap-1 font-bold";
+            } else if (tab === 'room') {
+                mainView.classList.add('hidden');
+                roomView.classList.remove('hidden');
+                roomBtn.className = "px-3 py-1.5 rounded-xl bg-white text-warmWoodDark shadow-sm transition font-bold flex items-center gap-1";
+                mainBtn.className = "px-3 py-1.5 rounded-xl text-warmWood/70 hover:text-warmWoodDark transition font-bold";
+                renderRoomDecoration();
+            }
+        }
+
+        function renderRoomDecoration() {
+            const fridgeBody = document.getElementById('fridge-body');
+            const activeTheme = APP_STATE.themes.find(t => t.id === APP_STATE.room.currentTheme) || APP_STATE.themes[0];
+            fridgeBody.className = `w-56 h-72 rounded-3xl ${activeTheme.styleClass} border-4 shadow-2xl relative flex flex-col justify-between p-3 transition-all duration-300`;
+
+            const stickerLayer = document.getElementById('sticker-layer');
+            stickerLayer.innerHTML = '';
+            APP_STATE.room.placedStickers.forEach(stkId => {
+                const stk = APP_STATE.stickers.find(s => s.id === stkId);
+                if (stk) {
+                    const el = document.createElement('div');
+                    el.className = "absolute text-2xl drop-shadow select-none animate-bounce-short";
+                    el.style.left = `${stk.x}%`;
+                    el.style.top = `${stk.y}%`;
+                    el.innerText = stk.icon;
+                    stickerLayer.appendChild(el);
+                }
+            });
+
+            const themesContainer = document.getElementById('owned-themes-list');
+            themesContainer.innerHTML = '';
+            APP_STATE.themes.filter(t => t.owned).forEach(t => {
+                const isSelected = t.id === APP_STATE.room.currentTheme;
+                const btn = document.createElement('button');
+                btn.onclick = () => {
+                    APP_STATE.room.currentTheme = t.id;
+                    renderRoomDecoration();
+                };
+                btn.className = `px-3 py-1.5 rounded-xl text-xs border font-medium shrink-0 transition ${
+                    isSelected ? 'bg-warmWood text-white border-warmWood shadow-sm' : 'bg-cream text-stone-700 border-[#E3D7C5]'
+                }`;
+                btn.innerText = t.name;
+                themesContainer.appendChild(btn);
+            });
+
+            const stickersContainer = document.getElementById('owned-stickers-list');
+            stickersContainer.innerHTML = '';
+            APP_STATE.stickers.filter(s => s.owned).forEach(s => {
+                const isPlaced = APP_STATE.room.placedStickers.includes(s.id);
+                const btn = document.createElement('button');
+                btn.onclick = () => toggleStickerPlacement(s.id);
+                btn.className = `px-3 py-1.5 rounded-2xl text-xs border flex items-center gap-1.5 transition ${
+                    isPlaced ? 'bg-amber-100 border-amber-300 text-amber-900 font-bold' : 'bg-cream text-stone-700 border-[#E3D7C5]'
+                }`;
+                btn.innerHTML = `<span>${s.icon}</span> <span>${s.name}</span> <span class="text-[10px] opacity-60">${isPlaced ? '(부착됨)' : '(부착)'}</span>`;
+                stickersContainer.appendChild(btn);
+            });
+        }
+
+        function toggleStickerPlacement(stkId) {
+            const idx = APP_STATE.room.placedStickers.indexOf(stkId);
+            if (idx > -1) {
+                APP_STATE.room.placedStickers.splice(idx, 1);
+            } else {
+                APP_STATE.room.placedStickers.push(stkId);
+            }
+            renderRoomDecoration();
+        }
+
+        function openShopModal() {
+            renderShop();
+            document.getElementById('shop-modal').classList.remove('hidden');
+        }
+
+        function renderShop() {
+            const container = document.getElementById('shop-items-container');
+            container.innerHTML = '';
+
+            const unownedThemes = APP_STATE.themes.filter(t => !t.owned);
+            const unownedStickers = APP_STATE.stickers.filter(s => !s.owned);
+
+            if (unownedThemes.length === 0 && unownedStickers.length === 0) {
+                container.innerHTML = `<p class="text-xs text-center text-stone-400 py-6">모든 인테리어 아이템을 구매하셨습니다! 🎉</p>`;
+                return;
+            }
+
+            unownedThemes.forEach(t => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = "flex justify-between items-center p-3 rounded-2xl bg-cream border border-[#EFE8DA]";
+                itemDiv.innerHTML = `
+                    <div>
+                        <span class="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-md font-bold">테마</span>
+                        <p class="text-xs font-bold text-warmWoodDark mt-1">${t.name}</p>
+                    </div>
+                    <button onclick="buyTheme('${t.id}')" class="gold-gradient text-warmWoodDark text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm hover:brightness-105 flex items-center gap-1">
+                        <i class="fa-solid fa-coins text-amber-800"></i> ${t.price} 골드
+                    </button>
+                `;
+                container.appendChild(itemDiv);
+            });
+
+            unownedStickers.forEach(s => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = "flex justify-between items-center p-3 rounded-2xl bg-cream border border-[#EFE8DA]";
+                itemDiv.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span class="text-xl">${s.icon}</span>
+                        <div>
+                            <span class="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md font-bold">스티커</span>
+                            <p class="text-xs font-bold text-warmWoodDark mt-0.5">${s.name}</p>
+                        </div>
+                    </div>
+                    <button onclick="buySticker('${s.id}')" class="gold-gradient text-warmWoodDark text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm hover:brightness-105 flex items-center gap-1">
+                        <i class="fa-solid fa-coins text-amber-800"></i> ${s.price} 골드
+                    </button>
+                `;
+                container.appendChild(itemDiv);
+            });
+        }
+
+        function buyTheme(themeId) {
+            const theme = APP_STATE.themes.find(t => t.id === themeId);
+            if (theme && APP_STATE.user.coins >= theme.price) {
+                APP_STATE.user.coins -= theme.price;
+                theme.owned = true;
+                APP_STATE.room.currentTheme = theme.id;
+                renderProfile();
+                renderShop();
+                renderRoomDecoration();
+                alert(`🎉 [${theme.name}] 테마를 구매하여 바로 적용했습니다!`);
+            } else {
+                alert('골드가 부족합니다! 요리를 완료하여 골드를 모아보세요.');
+            }
+        }
+
+        function buySticker(stickerId) {
+            const stk = APP_STATE.stickers.find(s => s.id === stickerId);
+            if (stk && APP_STATE.user.coins >= stk.price) {
+                APP_STATE.user.coins -= stk.price;
+                stk.owned = true;
+                APP_STATE.room.placedStickers.push(stk.id);
+                renderProfile();
+                renderShop();
+                renderRoomDecoration();
+                alert(`🎉 [${stk.name}] 스티커를 구매하여 냉장고에 부착했습니다!`);
+            } else {
+                alert('골드가 부족합니다! 요리를 완료하여 골드를 모아보세요.');
+            }
+        }
+
+        function addEXP(amount) {
+            APP_STATE.user.exp += amount;
+            if (APP_STATE.user.exp >= APP_STATE.user.maxExp) {
+                APP_STATE.user.exp -= APP_STATE.user.maxExp;
+                APP_STATE.user.level += 1;
+                APP_STATE.user.maxExp = Math.floor(APP_STATE.user.maxExp * 1.3);
+                APP_STATE.user.title = LEVEL_TITLES[APP_STATE.user.level] || `냉털 전설 (Lv.${APP_STATE.user.level})`;
+                
+                if (typeof confetti === 'function') {
+                    confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
+                }
+            }
+            renderProfile();
+        }
+
+        function addCoins(amount) {
+            APP_STATE.user.coins += amount;
+            renderProfile();
+        }
+
+        function renderProfile() {
+            document.getElementById('user-coins').innerText = APP_STATE.user.coins.toLocaleString();
+            document.getElementById('level-badge').innerText = `Lv.${APP_STATE.user.level}`;
+            document.getElementById('user-title').innerText = APP_STATE.user.title;
+            document.getElementById('rescued-count').innerText = APP_STATE.user.rescuedCount;
+            document.getElementById('saved-money').innerText = APP_STATE.user.savedMoney.toLocaleString();
+
+            const pct = Math.min(100, Math.floor((APP_STATE.user.exp / APP_STATE.user.maxExp) * 100));
+            document.getElementById('exp-bar').style.width = `${pct}%`;
+            document.getElementById('exp-text').innerText = `${APP_STATE.user.exp} / ${APP_STATE.user.maxExp} EXP`;
+        }
+
+        function renderPresets() {
+            const container = document.getElementById('preset-container');
+            container.innerHTML = '';
+
+            APP_STATE.ingredients.forEach(item => {
+                const isUrgent = item.dDay <= 2;
+                const btn = document.createElement('button');
+                btn.onclick = () => toggleIngredient(item.id);
+                btn.className = `px-3 py-2 rounded-2xl border text-xs flex items-center gap-1.5 transition ${
+                    item.selected 
+                        ? 'bg-warmWood text-white border-warmWood shadow-sm font-semibold' 
+                        : 'bg-cream text-stone-700 border-[#E3D7C5] hover:bg-sand'
+                }`;
+
+                btn.innerHTML = `
+                    <span>${item.icon}</span>
+                    <span>${item.name}</span>
+                    <span class="${isUrgent ? 'bg-red-500 text-white' : (item.selected ? 'bg-white/20 text-white' : 'bg-sand text-stone-500')} text-[10px] px-1.5 py-0.2 rounded-full font-bold">
+                        D-${item.dDay}
+                    </span>
+                `;
+                container.appendChild(btn);
+            });
+            updateIngredientCount();
+        }
+
+        function toggleIngredient(id) {
+            const ing = APP_STATE.ingredients.find(i => i.id === id);
+            if (ing) {
+                ing.selected = !ing.selected;
+                renderPresets();
+                updateIngredientCount();
+                
+                if (ing.selected && ing.dDay <= 2) {
+                    completeQuest('q1');
+                }
+            }
+        }
+
+        function addCustomIngredient() {
+            const input = document.getElementById('custom-ingredient-input');
+            const val = input.value.trim();
+            if (!val) return;
+
+            const newItem = {
+                id: Date.now(),
+                name: val,
+                category: '기타',
+                dDay: 3,
+                icon: '🛒',
+                selected: true
+            };
+            APP_STATE.ingredients.unshift(newItem);
+            input.value = '';
+            renderPresets();
+            updateIngredientCount();
+        }
+
+        function updateIngredientCount() {
+            const selected = APP_STATE.ingredients.filter(i => i.selected);
+            document.getElementById('ingredient-count').innerText = `총 ${selected.length}개 선택됨`;
+        }
+
+        function openRouletteModal() {
+            document.getElementById('roulette-modal').classList.remove('hidden');
+        }
+
+        function spinRoulette() {
+            const selected = APP_STATE.ingredients.filter(i => i.selected);
+            if (selected.length === 0) {
+                alert('냉장고에서 먼저 최소 1개 이상의 재료를 선택해주세요!');
+                return;
+            }
+
+            const wheel = document.getElementById('roulette-wheel');
+            const resultIcon = document.getElementById('roulette-result-icon');
+            const resultText = document.getElementById('roulette-result-text');
+            const btn = document.getElementById('spin-btn');
+
+            btn.disabled = true;
+            btn.classList.add('opacity-50');
+
+            const randomDeg = 1440 + Math.floor(Math.random() * 360);
+            wheel.style.transform = `rotate(${randomDeg}deg)`;
+
+            setTimeout(() => {
+                const randomItem = selected[Math.floor(Math.random() * selected.length)];
+                resultIcon.innerText = randomItem.icon;
+                resultText.innerText = `오늘의 주인공: [${randomItem.name}]`;
+
+                btn.disabled = false;
+                btn.classList.remove('opacity-50');
+
+                setTimeout(() => {
+                    closeModal('roulette-modal');
+                    generateRecipes();
+                }, 1200);
+            }, 3500);
+        }
+
+        function openQuestsModal() {
+            document.getElementById('quests-modal').classList.remove('hidden');
+        }
+
+        function openBadgesModal() {
+            document.getElementById('badges-modal').classList.remove('hidden');
+        }
+
+        function renderQuests() {
+            const container = document.getElementById('quest-list');
+            container.innerHTML = '';
+
+            APP_STATE.quests.forEach(q => {
+                const div = document.createElement('div');
+                div.className = `p-3 rounded-2xl border flex justify-between items-center ${
+                    q.completed ? 'bg-emerald-50 border-emerald-200' : 'bg-cream border-[#EFE8DA]'
+                }`;
+                div.innerHTML = `
+                    <div>
+                        <p class="text-xs font-bold text-warmWoodDark">${q.text}</p>
+                        <p class="text-[10px] text-stone-500 mt-0.5">+${q.exp} EXP | +${q.coins} 골드</p>
+                    </div>
+                    ${q.completed 
+                        ? `<span class="text-xs bg-emerald-600 text-white px-2.5 py-1 rounded-full font-bold"><i class="fa-solid fa-check"></i> 완료</span>`
+                        : `<button onclick="completeQuest('${q.id}')" class="text-xs bg-accentGold text-warmWoodDark font-bold px-3 py-1 rounded-full hover:brightness-105">달성</button>`
+                    }
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function completeQuest(id) {
+            const q = APP_STATE.quests.find(item => item.id === id);
+            if (q && !q.completed) {
+                q.completed = true;
+                addEXP(q.exp);
+                addCoins(q.coins);
+                renderQuests();
+            }
+        }
+
+        function renderBadges() {
+            const container = document.getElementById('badge-grid');
+            container.innerHTML = '';
+
+            APP_STATE.badges.forEach(b => {
+                const div = document.createElement('div');
+                div.className = `p-3 rounded-2xl border text-center ${
+                    b.unlocked ? 'bg-amber-50 border-amber-200' : 'bg-stone-100 border-stone-200 opacity-60'
+                }`;
+                div.innerHTML = `
+                    <div class="text-2xl mb-1">${b.icon}</div>
+                    <p class="text-xs font-bold text-warmWoodDark">${b.name}</p>
+                    <p class="text-[10px] text-stone-500 mt-0.5">${b.desc}</p>
+                    <span class="inline-block mt-1 text-[9px] ${b.unlocked ? 'bg-amber-200 text-amber-800' : 'bg-stone-200 text-stone-600'} px-2 py-0.5 rounded-full font-bold">
+                        ${b.unlocked ? '획득 완료' : '잠김'}
+                    </span>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        async function generateRecipes() {
+            const selected = APP_STATE.ingredients.filter(i => i.selected).map(i => i.name);
+            if (selected.length === 0) {
+                alert('최소 1개 이상의 식재료를 선택해 주세요!');
+                return;
+            }
+
+            const container = document.getElementById('recipe-cards-container');
+            const statusText = document.getElementById('recipe-status');
+
+            statusText.innerText = '선택 재료 기반 맞춤 분석 완료!';
+            addEXP(30);
+            completeQuest('q3');
+
+            // Filter recipes that contain or relate to selected ingredients, fallback to base list
+            const matched = BASE_SCIENTIFIC_RECIPES.filter(r => 
+                selected.some(ing => r.title.includes(ing) || r.steps.some(s => s.includes(ing)))
+            );
+
+            const displayRecipes = matched.length > 0 ? matched : BASE_SCIENTIFIC_RECIPES;
+            APP_STATE.currentRecipes = displayRecipes;
+            renderRecipeCards(displayRecipes);
+        }
+
+        function renderRecipeCards(recipes) {
+            const container = document.getElementById('recipe-cards-container');
+            container.innerHTML = '';
+
+            recipes.forEach((r, idx) => {
+                const imgUrl = r.imageUrl || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80';
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-3xl overflow-hidden card-shadow border border-[#EFE8DA] space-y-3 relative hover:border-amber-300 transition";
+                card.innerHTML = `
+                    <div class="relative h-44 w-full bg-stone-100 overflow-hidden">
+                        <img src="${imgUrl}" alt="${r.title}" class="w-full h-full object-cover hover:scale-105 transition duration-500" onError="this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80'">
+                        <div class="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-bold text-amber-900 shadow-sm">
+                            ${r.category || '한식'} | 난이도: ${r.difficulty}
+                        </div>
+                        <div class="absolute top-3 right-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-medium text-white">
+                            <i class="fa-regular fa-clock"></i> ${r.time}
+                        </div>
+                    </div>
+
+                    <div class="p-5 pt-0 space-y-3">
+                        <h3 class="font-bold text-base text-warmWoodDark">${r.title}</h3>
+
+                        <div class="bg-amber-50/60 border border-amber-200/60 rounded-2xl p-3 text-xs text-amber-900 flex items-start gap-2">
+                            <span class="text-base">🧪</span>
+                            <div>
+                                <p class="font-bold text-[11px]">식품과학 핵심 메커니즘</p>
+                                <p class="text-[11px] text-stone-600 line-clamp-2 mt-0.5">${r.scienceTip}</p>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between text-[11px] text-stone-500 px-1 pt-1">
+                            <span>🔥 ${r.calories}</span>
+                            <span>탄 ${r.carbs} | 단 ${r.protein} | 지 ${r.fat}</span>
+                        </div>
+
+                        <button onclick="openRecipeModal(${idx})" class="w-full bg-sand text-warmWoodDark font-bold py-2.5 rounded-xl text-xs hover:bg-warmWood hover:text-white transition mt-2">
+                            조리법 & 과학 팁 자세히 보기 →
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function openRecipeModal(index) {
+            const recipe = APP_STATE.currentRecipes[index];
+            if (!recipe) return;
+
+            APP_STATE.selectedRecipeForModal = recipe;
+            const content = document.getElementById('modal-content');
+            const imgUrl = recipe.imageUrl || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80';
+
+            content.innerHTML = `
+                <div class="relative h-48 -mx-5 -mt-5 mb-4 overflow-hidden">
+                    <img src="${imgUrl}" alt="${recipe.title}" class="w-full h-full object-cover" onError="this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80'">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex items-end p-4">
+                        <div>
+                            <span class="text-[10px] bg-amber-400 text-stone-900 font-bold px-2 py-0.5 rounded mb-1 inline-block">${recipe.category || '맞춤요리'}</span>
+                            <h2 class="font-bold text-lg text-white drop-shadow">${recipe.title}</h2>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="text-xs text-stone-500">소요시간: ${recipe.time} | 칼로리: ${recipe.calories} (탄 ${recipe.carbs} / 단 ${recipe.protein} / 지 ${recipe.fat})</p>
+                </div>
+
+                <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-1">
+                    <p class="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                        <i class="fa-solid fa-vial text-accentGold"></i> 식품 과학 조리 비법
+                    </p>
+                    <p class="text-xs text-stone-700 leading-relaxed">${recipe.scienceTip}</p>
+                </div>
+
+                ${recipe.missingIngredients && recipe.missingIngredients.length > 0 ? `
+                <div class="bg-cream border border-[#EFE8DA] rounded-2xl p-3">
+                    <p class="text-xs font-bold text-stone-600 mb-1">🛒 추가로 있으면 좋은 재료</p>
+                    <div class="flex flex-wrap gap-1">
+                        ${recipe.missingIngredients.map(m => `<span class="text-[11px] bg-white border border-stone-200 px-2 py-0.5 rounded-md text-stone-600">${m}</span>`).join('')}
+                    </div>
+                </div>
+                ` : ''}
+
+                <div class="space-y-2">
+                    <p class="text-sm font-bold text-warmWoodDark">👨‍🍳 상세 조리 순서</p>
+                    <div class="space-y-2">
+                        ${recipe.steps.map((step, idx) => `
+                            <div class="flex gap-3 bg-cream p-3 rounded-2xl border border-[#EFE8DA] text-xs">
+                                <span class="font-bold text-accentGold">${idx + 1}</span>
+                                <p class="text-stone-700 leading-normal">${step}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+
+            completeQuest('q2');
+            document.getElementById('recipe-modal').classList.remove('hidden');
+        }
+
+        function completeRecipeAndRescue() {
+            APP_STATE.user.rescuedCount += 2;
+            APP_STATE.user.savedMoney += 6500;
+            addEXP(50);
+            addCoins(200);
+
+            closeModal('recipe-modal');
+
+            if (typeof confetti === 'function') {
+                confetti({ particleCount: 100, spread: 70, origin: { y: 0.7 } });
+            }
+
+            alert('🎉 요리 완료! 식재료 2개를 구원하고 식비 6,500원을 절약했습니다 (+50 EXP / +200 골드)');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
